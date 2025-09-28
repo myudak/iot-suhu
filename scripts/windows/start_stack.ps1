@@ -20,7 +20,7 @@ function Import-EnvFile {
         if ($_ -match '^[ \t]*([^=]+)=(.*)$') {
             $name = $Matches[1].Trim()
             $value = $Matches[2].Trim()
-            $env:$name = $value
+            Set-Item -Path ("Env:{0}" -f $name) -Value $value
         }
     }
 }
