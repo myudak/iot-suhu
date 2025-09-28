@@ -1,6 +1,4 @@
-#include <Arduino.h>
-
-#include "siap_suhu_firmware.h"
+#include "../include/siap_suhu_firmware.h"
 
 void setup() {
   siapSuhuSetup();

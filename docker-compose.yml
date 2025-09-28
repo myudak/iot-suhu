@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: siap-suhu-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -p 1883 -t $$SYS/broker/version -C 1 -W 3 >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  nodered:
+    image: nodered/node-red:3.1
+    container_name: siap-suhu-nodered
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    ports:
+      - "1880:1880"
+    env_file:
+      - .env
+    environment:
+      - TZ=UTC
+      - DB_PATH=${DB_PATH:-/data/siapsuhu.db}
+    volumes:
+      - ./collector/node-red-data:/data
+      - ./data/sqlite:/data/sqlite
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:1880/ >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  llm-insight-service:
+    build: ./llm-insight-service
+    container_name: siap-suhu-llm
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DB_PATH=${DB_PATH:-/data/siapsuhu.db}
+    volumes:
+      - ./data/sqlite:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  telegram-notifier:
+    build: ./telegram-notifier
+    container_name: siap-suhu-telegram
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - ./data/sqlite:/data
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
