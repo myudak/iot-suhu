@@ -13,7 +13,7 @@ notifier = TelegramNotifier(settings)
 
 
 @asynccontextmanager
-def lifespan(_: FastAPI):
+async def lifespan(_: FastAPI):
     await notifier.start()
     try:
         yield

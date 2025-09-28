@@ -14,7 +14,7 @@ engine = InsightEngine(settings)
 
 
 @asynccontextmanager
-def lifespan(_: FastAPI):
+async def lifespan(_: FastAPI):
     await asyncio.to_thread(engine.start)
     try:
         yield
